@@ -13,55 +13,79 @@ struct Product {
     double price;
 };
 
+// Global variables
 vector<Product> inventory;
 int productCount = 0;
 
+// Function to save inventory to a file
 void saveInventory() {
     ofstream file("inventory.txt");
-    if (file.is_open()) {
-        for (const auto& product : inventory) {
-            file << product.id << " " << product.name << " "
-                 << product.quantity << " " << product.price << endl;
-        }
-        file.close();
+    if (!file) {
+        cout << "Error opening file for writing!" << endl;
+        return;
     }
+    
+    for (const auto& product : inventory) {
+        file << product.id << " " << product.name << " "
+             << product.quantity << " " << product.price << endl;
+    }
+    file.close();
 }
 
+// Function to load inventory from a file
 void loadInventory() {
     ifstream file("inventory.txt");
-    if (file.is_open()) {
-        Product product;
-        while (file >> product.id >> product.name >> product.quantity >> product.price) {
-            inventory.push_back(product);
-        }
-        file.close();
+    if (!file) {
+        cout << "No existing inventory found. Starting fresh." << endl;
+        return;
     }
+    
+    inventory.clear(); // Clear existing inventory
+    Product product;
+    while (file >> product.id >> product.name >> product.quantity >> product.price) {
+        inventory.push_back(product);
+        productCount = max(productCount, product.id); // Ensure ID continuity
+    }
+    file.close();
 }
 
+// Function to add a product
 void addProduct() {
     Product newProduct;
     newProduct.id = ++productCount;
+
     cout << "Enter product name: ";
     cin >> newProduct.name;
-    cout << "Enter quantity: ";
-    cin >> newProduct.quantity;
-    cout << "Enter price: ";
-    cin >> newProduct.price;
     
+    do {
+        cout << "Enter quantity (positive number): ";
+        cin >> newProduct.quantity;
+    } while (newProduct.quantity < 0);
+    
+    do {
+        cout << "Enter price (positive number): ";
+        cin >> newProduct.price;
+    } while (newProduct.price < 0);
+
     inventory.push_back(newProduct);
+    cout << "Product added successfully!\n";
 }
 
+// Function to remove a product
 void removeProduct(int id) {
-    for (auto it = inventory.begin(); it != inventory.end(); ++it) {
-        if (it->id == id) {
-            inventory.erase(it);
-            cout << "Product removed." << endl;
-            return;
-        }
+    auto it = remove_if(inventory.begin(), inventory.end(), [id](const Product& p) {
+        return p.id == id;
+    });
+
+    if (it != inventory.end()) {
+        inventory.erase(it, inventory.end());
+        cout << "Product removed successfully!" << endl;
+    } else {
+        cout << "Product not found." << endl;
     }
-    cout << "Product not found." << endl;
 }
 
+// Function to update a product
 void updateProduct(int id) {
     for (auto& product : inventory) {
         if (product.id == id) {
@@ -69,26 +93,29 @@ void updateProduct(int id) {
             cin >> product.quantity;
             cout << "Enter new price: ";
             cin >> product.price;
-            cout << "Product updated." << endl;
+            cout << "Product updated successfully!\n";
             return;
         }
     }
     cout << "Product not found." << endl;
 }
 
+// Function to display all products
 void viewAllProducts() {
-    cout << "Inventory:\n";
+    if (inventory.empty()) {
+        cout << "Inventory is empty." << endl;
+        return;
+    }
+
+    cout << "\nInventory:\n";
     for (const auto& product : inventory) {
         cout << "ID: " << product.id << ", Name: " << product.name
              << ", Quantity: " << product.quantity << ", Price: $" << product.price << endl;
     }
 }
 
-void searchProduct() {
-    string searchName;
-    cout << "Enter product name to search: ";
-    cin >> searchName;
-
+// Function to search for a product by name
+void searchProduct(const string& searchName) {
     for (const auto& product : inventory) {
         if (product.name == searchName) {
             cout << "ID: " << product.id << ", Name: " << product.name
@@ -99,13 +126,15 @@ void searchProduct() {
     cout << "Product not found." << endl;
 }
 
+// Function to sort inventory by name
 void sortInventory() {
     sort(inventory.begin(), inventory.end(), [](const Product& a, const Product& b) {
         return a.name < b.name;
     });
-    cout << "Inventory sorted by name." << endl;
+    cout << "Inventory sorted successfully!\n";
 }
 
+// Menu function
 void menu() {
     int choice;
     while (true) {
@@ -141,10 +170,16 @@ void menu() {
             }
             case 5: saveInventory(); break;
             case 6: loadInventory(); break;
-            case 7: searchProduct(); break;
+            case 7: {
+                string name;
+                cout << "Enter product name to search: ";
+                cin >> name;
+                searchProduct(name);
+                break;
+            }
             case 8: sortInventory(); break;
-            case 9: return;
-            default: cout << "Invalid choice. Try again." << endl;
+            case 9: saveInventory(); return;
+            default: cout << "Invalid choice. Try again.\n";
         }
     }
 }
@@ -152,7 +187,6 @@ void menu() {
 int main() {
     loadInventory();
     menu();
-    saveInventory();
     return 0;
 }
 
